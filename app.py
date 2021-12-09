@@ -34,7 +34,7 @@ def home():
 @app.route('/predict', methods=['POST'])
 @cross_origin()
 def predict():
-	print('REACHED PREDICT PAGE')
+	print('REACHED PREDICT PAGE2')
 	# 1) grab POST request data
 	form = dict(request.json)
 
