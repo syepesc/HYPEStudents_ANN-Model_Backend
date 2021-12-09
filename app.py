@@ -7,13 +7,13 @@ from flask_cors import cross_origin
 """
 LOAD MODEL
 """
-file = open('encoder', 'rb')
+file = open('./model/encoder', 'rb')
 deserializer = pickle.load(file)
 label_encoders = deserializer['label encoders']
 pca = deserializer['pca']
 file.close()
 
-model = tf.keras.models.load_model('deep and cross network')
+model = tf.keras.models.load_model('./model/deep and cross network')
 
 
 """
@@ -36,40 +36,44 @@ def home():
 def predict():
 	print('REACHED PREDICT PAGE')
 	# 1) grab POST request data
-	form = request.json
+	form = dict(request.json)
 
 	# 2) define form keys as dataset columns for matching model input columns
+	# organized in the same order of the columns in csv dataset file
 	form_column_dict = {
 	'intakeTermCode': 'INTAKE TERM CODE',
 	'admitTermCode': 'ADMIT TERM CODE',
-	'expectedGradTermCode': 'EXPECTED GRAD TERM CODE',
-	'primaryProgramCode': 'PRIMARY PROGRAM CODE',
-	'hsAverageMarks': 'HS AVERAGE MARKS',
-	'englishTestScore': 'ENGLISH TEST SCORE',
-	'firstYearPersistenceCount': 'FIRST YEAR PERSISTENCE COUNT',
 	'intakeCollegeExperience': 'INTAKE COLLEGE EXPERIENCE',
+	'primaryProgramCode': 'PRIMARY PROGRAM CODE',
 	'schoolCode': 'SCHOOL CODE',
 	'studentLevelName': 'STUDENT LEVEL NAME',
-	'timeStatusName': 'TIME STATUS NAME',
-	'fundingSourceName': 'FUNDING SOURCE NAME',
 	'mailingPostalCodeGroup3': 'MAILING POSTAL CODE GROUP 3',
 	'gender': 'GENDER',
 	'disabilityInd': 'DISABILITY IND',
 	'futureTermEnroll': 'FUTURE TERM ENROL',
 	'academicPerformance': 'ACADEMIC PERFORMANCE',
+	'expectedGradTermCode': 'EXPECTED GRAD TERM CODE',
+	'firstYearPersistenceCount': 'FIRST YEAR PERSISTENCE COUNT',
+	'hsAverageMarks': 'HS AVERAGE MARKS',
+	'englishTestScore': 'ENGLISH TEST SCORE',
 	'ageGroupLongName': 'AGE GROUP LONG NAME',
 	'firstGenerationInd': 'FIRST GENERATION IND',
 	'effectiveAcademicHistory': 'effective academic history',
-	'applicantTargetSegmentName': 'APPLICANT TARGET SEGMENT NAME'
+	'applicantTargetSegmentName': 'APPLICANT TARGET SEGMENT NAME',
+	'timeStatusName': 'TIME STATUS NAME',
+	'fundingSourceName': 'FUNDING SOURCE NAME',
 	}
 
 	# 3) format data into model input dataframe format
 	sample = {}
 	print("\nFORM KEYS, VALUES and TYPES")
 	print("-----------------------------")
-	for key, value in form.items():
-		print(key, ":>>", value, ":>>", type(value))
-		sample[form_column_dict.get(key)] = value
+	for key in form_column_dict.keys():
+		print(key, ":>>", form.get(key), ":>>", type(form.get(key)))
+		sample[form_column_dict.get(key)] = form.get(key)
+	# for key, value in form.items():
+	# 	print(key, ":>>", value, ":>>", type(value))
+	# 	sample[form_column_dict.get(key)] = value
 	print("\n")
 
 	# 4) final format
@@ -81,13 +85,12 @@ def predict():
 	print("\n")
 
 	# 5) encoding categorical features
-	categorical_column = [col for col in sample.columns if sample[col].dtype == 'object']
+	categorical_column = [col for col in sample.columns if sample[col].dtype == 'object'] + ['PRIMARY PROGRAM CODE', 'INTAKE TERM CODE', 'ADMIT TERM CODE', 'EXPECTED GRAD TERM CODE']
 	for column in categorical_column:
 		encoder = label_encoders[column]
 		print(column + ':')
 		print(encoder.classes_)
 		sample[column] = pd.Series(encoder.transform(sample[column][sample[column].notna()]), index=sample[column][sample[column].notna()].index)
-
 	# 6) feature reduction
 	reduced_feature = pca.transform(sample[['FUNDING SOURCE NAME', 'TIME STATUS NAME']])  # FUNDING SOURCE NAME is highly correlated with TIME STATUS NAME
 	sample.insert(6, 'time and fund', reduced_feature)
@@ -127,37 +130,53 @@ if __name__ == '__main__':
 # TEST #
 ########
 
-# sample = {'INTAKE TERM CODE': 2020, 'ADMIT TERM CODE': 2020, 'EXPECTED GRAD TERM CODE': 2022, 'PRIMARY PROGRAM CODE': 3468,
-#   'HS AVERAGE MARKS': 0, 'ENGLISH TEST SCORE': 130, 'FIRST YEAR PERSISTENCE COUNT': 0,
-#   'INTAKE COLLEGE EXPERIENCE': 'Prep Program Enrolled', 'SCHOOL CODE': 'ST', 'STUDENT LEVEL NAME': 'Post Secondary',
-#   'TIME STATUS NAME': 'Full-Time', 'FUNDING SOURCE NAME': 'GPOG - FT', 'MAILING POSTAL CODE GROUP 3': 'M1H',
-#   'GENDER': 'F', 'DISABILITY IND': 'N', 'FUTURE TERM ENROL': '1-0-0-0-0-0-0-0-0-0',
-#   'ACADEMIC PERFORMANCE': 'DF - Poor', 'AGE GROUP LONG NAME': '41 to 50', 'FIRST GENERATION IND': 'N',
-#   'effective academic history': 'no', 'APPLICANT TARGET SEGMENT NAME': 'Non-Direct Entry'}
+# sample = {
+# 	'INTAKE TERM CODE': 2020, 
+# 	'ADMIT TERM CODE': 2020, 
+# 	'INTAKE COLLEGE EXPERIENCE': 'New to College', 
+# 	'PRIMARY PROGRAM CODE': 6700, 
+# 	'SCHOOL CODE': 'CH', 
+# 	'STUDENT LEVEL NAME': 'Post Secondary', 
+# 	'MAILING POSTAL CODE GROUP 3': 'L1V', 
+# 	'GENDER': 'F', 
+# 	'DISABILITY IND': 'N', 
+# 	'FUTURE TERM ENROL': '1-0-0-0-0-0-0-0-0-0',
+# 	'ACADEMIC PERFORMANCE': 'DF - Poor', 
+# 	'EXPECTED GRAD TERM CODE': 2022, 
+# 	'FIRST YEAR PERSISTENCE COUNT': 0, 
+# 	'HS AVERAGE MARKS': 0, 
+# 	'ENGLISH TEST SCORE': 200, 
+# 	'AGE GROUP LONG NAME': '21 to 25', 
+# 	'FIRST GENERATION IND': 'N', 
+# 	'effective academic history': 'no', 
+# 	'APPLICANT TARGET SEGMENT NAME': 'Non-Direct Entry',
+# 	'TIME STATUS NAME': 'Full-Time', 
+# 	'FUNDING SOURCE NAME': 'GPOG - FT'
+# 	}
 
-# sample = {'INTAKE TERM CODE': 2021, 'ADMIT TERM CODE': 2021, 
-# 'INTAKE COLLEGE EXPERIENCE': 'Enrolled', 
-# 'PRIMARY PROGRAM CODE': 8226, 'SCHOOL CODE': 'TR', 
-# 'STUDENT LEVEL NAME': 'Post Secondary', 'TIME STATUS NAME': 'Full-Time', 
-# 'FUNDING SOURCE NAME': 'GPOG - FT', 'MAILING POSTAL CODE GROUP 3': 'M4H', 
-# 'GENDER': 'M', 'DISABILITY IND': 'N', 'FUTURE TERM ENROL': '1-0-0-0-0-0-0-0-0-0', 
-# 'ACADEMIC PERFORMANCE': 'C - Satisfactory', 'EXPECTED GRAD TERM CODE': 2023, 
-# 'FIRST YEAR PERSISTENCE COUNT': 0, 'HS AVERAGE MARKS': 75, 'ENGLISH TEST SCORE': 130, 
-# 'AGE GROUP LONG NAME': '0 to 18', 'FIRST GENERATION IND': 'N', 
-# 'effective academic history': 'high school', 'APPLICANT TARGET SEGMENT NAME': 
-# 'Direct Entry'}
-
-# sample = {'INTAKE TERM CODE': 2021, 'ADMIT TERM CODE': 2021, 
-# 'INTAKE COLLEGE EXPERIENCE': 'Enrolled', 
-# 'PRIMARY PROGRAM CODE': 6700, 'SCHOOL CODE': 'TR', 
-# 'STUDENT LEVEL NAME': 'Post Secondary', 'TIME STATUS NAME': 'Full-Time', 
-# 'FUNDING SOURCE NAME': 'GPOG - FT', 'MAILING POSTAL CODE GROUP 3': 'M4H', 
-# 'GENDER': 'M', 'DISABILITY IND': 'N', 'FUTURE TERM ENROL': '1-0-0-0-0-0-0-0-0-0', 
-# 'ACADEMIC PERFORMANCE': 'C - Satisfactory', 'EXPECTED GRAD TERM CODE': 2023, 
-# 'FIRST YEAR PERSISTENCE COUNT': 0, 'HS AVERAGE MARKS': 90, 'ENGLISH TEST SCORE': 200, 
-# 'AGE GROUP LONG NAME': '21 to 25', 'FIRST GENERATION IND': 'N', 
-# 'effective academic history': 'high school', 'APPLICANT TARGET SEGMENT NAME': 
-# 'Direct Entry'}
+# sample = {
+# 	'INTAKE TERM CODE': 2020, 
+# 	'ADMIT TERM CODE': 2020, 
+# 	'INTAKE COLLEGE EXPERIENCE': 'New to College', 
+# 	'PRIMARY PROGRAM CODE': 9111, 
+# 	'SCHOOL CODE': 'CH', 
+# 	'STUDENT LEVEL NAME': 'Post Secondary', 
+# 	'MAILING POSTAL CODE GROUP 3': 'L1V', 
+# 	'GENDER': 'F', 
+# 	'DISABILITY IND': 'N', 
+# 	'FUTURE TERM ENROL': '1-1-1-1-0-0-0-0-0-0',
+# 	'ACADEMIC PERFORMANCE': 'DF - Poor', 
+# 	'EXPECTED GRAD TERM CODE': 2020, 
+# 	'FIRST YEAR PERSISTENCE COUNT': 0, 
+# 	'HS AVERAGE MARKS': 0, 
+# 	'ENGLISH TEST SCORE': 140, 
+# 	'AGE GROUP LONG NAME': '41 to 50', 
+# 	'FIRST GENERATION IND': 'Y', 
+# 	'effective academic history': 'no', 
+# 	'APPLICANT TARGET SEGMENT NAME': 'Non-Direct Entry',
+# 	'TIME STATUS NAME': 'Full-Time', 
+# 	'FUNDING SOURCE NAME': 'GPOG - FT'
+# 	}
 
 
 # sample = pd.DataFrame([sample])
@@ -168,13 +187,12 @@ if __name__ == '__main__':
 # print("\n")
 
 # # 5) encoding categorical features
-# categorical_column = [col for col in sample.columns if sample[col].dtype == 'object']
+# categorical_column = [col for col in sample.columns if sample[col].dtype == 'object'] + ['PRIMARY PROGRAM CODE', 'INTAKE TERM CODE', 'ADMIT TERM CODE', 'EXPECTED GRAD TERM CODE']
 # for column in categorical_column:
 # 	encoder = label_encoders[column]
 # 	print(column + ':')
 # 	print(encoder.classes_)
 # 	sample[column] = pd.Series(encoder.transform(sample[column][sample[column].notna()]), index=sample[column][sample[column].notna()].index)
-
 # # 6) feature reduction
 # reduced_feature = pca.transform(sample[['FUNDING SOURCE NAME', 'TIME STATUS NAME']])  # FUNDING SOURCE NAME is highly correlated with TIME STATUS NAME
 # sample.insert(6, 'time and fund', reduced_feature)
