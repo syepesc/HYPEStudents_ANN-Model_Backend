@@ -98,8 +98,10 @@ def predict():
 	prediction = model.predict(sample)[:, 1][0]
 
 	if prediction < .5:
+		print({"prediction":str(prediction), "graphs":[]})
 		return {"prediction":str(prediction), "graphs":[]} 
 	else:
+		print({"prediction":str(prediction), "graphs":["academic performance vs failure.png", "first year survival vs failure.png", "high school marks vs failure.png"]})
 		return {"prediction":str(prediction), "graphs":["academic performance vs failure.png", "first year survival vs failure.png", "high school marks vs failure.png"]} 
 
 
@@ -129,30 +131,6 @@ if __name__ == '__main__':
 ########
 # TEST #
 ########
-
-# sample = {
-# 	'INTAKE TERM CODE': 2020, 
-# 	'ADMIT TERM CODE': 2020, 
-# 	'INTAKE COLLEGE EXPERIENCE': 'New to College', 
-# 	'PRIMARY PROGRAM CODE': 6700, 
-# 	'SCHOOL CODE': 'CH', 
-# 	'STUDENT LEVEL NAME': 'Post Secondary', 
-# 	'MAILING POSTAL CODE GROUP 3': 'L1V', 
-# 	'GENDER': 'F', 
-# 	'DISABILITY IND': 'N', 
-# 	'FUTURE TERM ENROL': '1-0-0-0-0-0-0-0-0-0',
-# 	'ACADEMIC PERFORMANCE': 'DF - Poor', 
-# 	'EXPECTED GRAD TERM CODE': 2022, 
-# 	'FIRST YEAR PERSISTENCE COUNT': 0, 
-# 	'HS AVERAGE MARKS': 0, 
-# 	'ENGLISH TEST SCORE': 200, 
-# 	'AGE GROUP LONG NAME': '21 to 25', 
-# 	'FIRST GENERATION IND': 'N', 
-# 	'effective academic history': 'no', 
-# 	'APPLICANT TARGET SEGMENT NAME': 'Non-Direct Entry',
-# 	'TIME STATUS NAME': 'Full-Time', 
-# 	'FUNDING SOURCE NAME': 'GPOG - FT'
-# 	}
 
 # sample = {
 # 	'INTAKE TERM CODE': 2020, 
