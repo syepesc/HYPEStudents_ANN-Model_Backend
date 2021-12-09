@@ -1,41 +1,57 @@
 import pandas as pd, numpy as np, tensorflow as tf
-from imblearn.over_sampling import ADASYN
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from sklearn.model_selection import StratifiedKFold
 
 data = pd.read_csv('data')
-train_x, train_y = data[data['INTAKE TERM CODE'] < 2020].drop(columns='failure'), data[data['INTAKE TERM CODE'] < 2020]['failure']
-test_x, test_y = data[data['INTAKE TERM CODE'] >= 2020].drop(columns='failure'), data[data['INTAKE TERM CODE'] >= 2020]['failure']
-test_x, test_y = ADASYN().fit_resample(test_x, test_y)  # test set is unbalanced
-# one hot encoding
-train_y, test_y = tf.keras.utils.to_categorical(train_y, dtype=int), tf.keras.utils.to_categorical(test_y, dtype=int)
+# stratified sampling
+x_train, x_test, y_train, y_test = train_test_split(data.drop(columns='failure'), data['failure'], stratify=data['failure'], test_size=.2)
 
 hidden_units = [64, 64]
 def create_deep_and_cross_model():
-	input_layer = tf.keras.Input(shape=train_x.shape[1])
+	input_layer = tf.keras.Input(shape=x_train.shape[1])
+	batch_norm = tf.keras.layers.BatchNormalization()(input_layer)
 
-	cross = input_layer
+	cross = batch_norm
 	for _ in hidden_units:
-		units = input_layer.shape[-1]
-		x = tf.keras.layers.Dense(units)(input_layer)
-		cross = input_layer * x + cross
+		units = batch_norm.shape[-1]
+		x = tf.keras.layers.Dense(units, kernel_regularizer='l2')(batch_norm)
+		cross = batch_norm * x + cross
 	cross = tf.keras.layers.BatchNormalization()(cross)
 
-	deep = input_layer
+	deep = batch_norm
 	for units in hidden_units:
-		deep = tf.keras.layers.Dense(units)(deep)
+		deep = tf.keras.layers.Dense(units, kernel_regularizer='l2')(deep)
 		deep = tf.keras.layers.BatchNormalization()(deep)
 		deep = tf.keras.layers.ReLU()(deep)
-		deep = tf.keras.layers.Dropout(.5)(deep)
 
 	merged = tf.keras.layers.concatenate([cross, deep])
-	output_layer = tf.keras.layers.Dense(units=2, activation="sigmoid")(merged)
+	output_layer = tf.keras.layers.Dense(units=2, activation='sigmoid')(merged)
 	model = tf.keras.Model(inputs=input_layer, outputs=output_layer)
-	model.compile(loss='binary_crossentropy', optimizer='Adamax', metrics=['accuracy'])
+	model.compile(loss='sparse_categorical_crossentropy', optimizer='Adamax', metrics=['accuracy'])
 	return model
 
 model = create_deep_and_cross_model()
-model.fit(train_x, train_y, validation_data=(test_x, test_y), epochs=100)
-predict = model.predict(test_x)
-predict, test_y = [np.argmax(one_hot) for one_hot in predict], [np.argmax(one_hot) for one_hot in test_y]
-print(classification_report(test_y, predict))
+model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=100)
+predict = model.predict(x_test)
+predict = [np.argmax(one_hot) for one_hot in predict]
+print(classification_report(y_test, predict))
 model.save('deep and cross network')
+'''
+				precision   recall    f1-score    support
+			0.0     0.89    0.90        0.89        79
+			1.0     0.85    0.84        0.84        55
+	accuracy                            0.87        134
+	macro avg       0.87    0.87        0.87        134
+weighted avg        0.87    0.87        0.87        134
+'''
+
+# X, Y = data.drop(columns='failure'), data['failure']
+# kfold = StratifiedKFold(shuffle=True)
+# scores = []
+# for train, test in kfold.split(X, Y):
+# 	model.fit(X.loc[train], Y[train], epochs=100)
+# 	score = model.evaluate(X.loc[test], Y[test])
+# 	print('%s: %.2f' % (model.metrics_names[1], score[1]))
+# 	scores.append(score[1])
+# print("%.2f (+/- %.2f)" % (np.mean(scores), np.std(scores)))  # 0.95 (+/- 0.04)

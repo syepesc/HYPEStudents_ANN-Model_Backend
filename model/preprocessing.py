@@ -1,4 +1,4 @@
-import numpy as np, pandas as pd, ppscore as pps, matplotlib.pyplot as plt, seaborn as sns, shelve#, pandas_profiling as profile
+import numpy as np, pandas as pd, ppscore as pps, matplotlib.pyplot as plt, seaborn as sns, pickle#, pandas_profiling as profile
 from sklearn import preprocessing
 from sklearn.impute import KNNImputer
 from sklearn.decomposition import IncrementalPCA
@@ -57,10 +57,10 @@ reduced_feature = pca.transform(data[['FUNDING SOURCE NAME', 'TIME STATUS NAME']
 data.insert(6, 'time and fund', reduced_feature)
 data.drop(columns=['FUNDING SOURCE NAME', 'TIME STATUS NAME', 'high school indicator'], inplace=True)
 data.to_csv('data', index=False)
-serializer = shelve.open('encoder')
-serializer['label encoder'] = label_encoders
-serializer['pca'] = pca
-serializer.close()
+file = open('encoder', 'wb')
+serializer = {'label encoders': label_encoders, 'pca': pca}
+pickle.dump(serializer, file)
+file.close()
 
 # non-linear correlations
 matrix = pps.matrix(data)[['x', 'y', 'ppscore']].pivot(columns='x', index='y', values='ppscore')
