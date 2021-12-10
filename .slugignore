@@ -1,0 +1,6 @@
+# Ignore:
+*.psd
+*.pdf
+*.png
+/test
+/spec
